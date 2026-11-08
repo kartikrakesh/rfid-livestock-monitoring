@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livestock Monitoring Web Dashboard</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --secondary: #673AB7;
+            --error: #D32F2F;
+            --bg: #F0F2F5;
+            --text: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { margin-bottom: 30px; }
+        
+        /* The Invisible Net */
+        #scanBuffer {
+            position: absolute;
+            left: -9999px; /* Pushed off-screen */
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status { font-weight: 500; color: #666; margin-bottom: 20px; height: 20px; }
+        .status.error { color: var(--error); font-weight: bold; }
+        
+        .scan-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: background 0.3s;
+        }
+        .scan-btn:hover { background-color: #45a049; }
+
+        .reading-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .history-section { width: 100%; max-width: 800px; }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .export-btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #e0e0e0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Livestock Monitoring</h1>
+
+    <!-- THE INVISIBLE NET -->
+    <input type="text" id="scanBuffer" autocomplete="off">
+
+    <div class="dashboard-card">
+        <div id="statusText" class="status">System Ready. Click START SCANNING.</div>
+        <button class="scan-btn" onclick="startScan()">START SCANNING</button>
+        <div class="reading-row">
+            <span>ID: <span id="currentId">-</span></span>
+            <span>Temp: <span id="currentTemp">-</span></span>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <div class="history-header">
+            <h2>Acquisition History</h2>
+            <button class="export-btn" onclick="exportCSV()">Export CSV File</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>ID</th>
+                    <th>Temp</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <!-- Data will populate here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let isScanning = false;
+        let scanTimeout;
+        const historyData = [];
+
+        const scanInput = document.getElementById('scanBuffer');
+        const statusText = document.getElementById('statusText');
+
+        // 1. The 5-Second Timeout Logic
+        function startScan() {
+            isScanning = true;
+            statusText.innerText = 'Scanning... Waiting for hardware tap (5s)';
+            statusText.className = 'status';
+            
+            scanInput.value = '';
+            scanInput.focus(); // Force the browser cursor into the invisible net
+
+            clearTimeout(scanTimeout);
+            scanTimeout = setTimeout(() => {
+                isScanning = false;
+                statusText.innerText = 'INVALID, TRY AGAIN';
+                statusText.className = 'status error';
+                scanInput.blur(); // Lock the system
+            }, 5000);
+        }
+
+        // 2. Catching the STM32's "Enter" Keystroke
+        scanInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                if (!isScanning) return;
+
+                const completeMessage = scanInput.value.trim();
+                const parts = completeMessage.split('|');
+
+                if (parts.length >= 2) {
+                    const parsedTemp = parts[1];
+
+                    // --- CAPSTONE DEMO LOGIC (RANDOMIZED ID) ---
+                    const randomCalfNumber = Math.floor(Math.random() * 999) + 1; 
+                    const displayID = `P${String(randomCalfNumber).padStart(3, '0')}`;
+                    // -------------------------------------------
+
+                    // Success handling
+                    clearTimeout(scanTimeout);
+                    isScanning = false;
+                    scanInput.blur();
+
+                    // Update UI
+                    statusText.innerText = 'Scan Successful!';
+                    statusText.className = 'status';
+                    document.getElementById('currentId').innerText = displayID;
+                    document.getElementById('currentTemp').innerText = `${parsedTemp}°C`;
+
+                    // Generate timestamps
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString();
+                    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                    // Add to history
+                    const record = { date: dateStr, time: timeStr, id: displayID, temp: `${parsedTemp}°C` };
+                    historyData.unshift(record);
+                    updateTable();
+                } else {
+                    statusText.innerText = 'Error: Malformed sensor data';
+                    statusText.className = 'status error';
+                }
+                scanInput.value = ''; // Clear buffer for next read
+            }
+        });
+
+        // 3. Update the HTML Table
+        function updateTable() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '';
+            historyData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row.date}</td><td>${row.time}</td><td>${row.id}</td><td>${row.temp}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 4. Client-Side CSV Export
+        function exportCSV() {
+            if (historyData.length === 0) {
+                alert('Scan a tag first before exporting!');
+                return;
+            }
+
+            let csvString = 'Date,Time,Cattle ID,Temperature\n';
+            historyData.forEach(row => {
+                csvString += `${row.date},${row.time},${row.id},${row.temp}\n`;
+            });
+
+            // Create a downloadable blob
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `LivestockData_${Date.now()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

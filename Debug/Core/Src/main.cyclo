@@ -1,0 +1,9 @@
+../Core/Src/main.c:74:6:Keyboard_Press_Key	1
+../Core/Src/main.c:90:6:Keyboard_Type_String	8
+../Core/Src/main.c:128:5:main	3
+../Core/Src/main.c:218:6:SystemClock_Config	4
+../Core/Src/main.c:265:13:MX_I2C1_Init	2
+../Core/Src/main.c:299:13:MX_SPI1_Init	2
+../Core/Src/main.c:337:13:MX_USART1_UART_Init	2
+../Core/Src/main.c:370:13:MX_GPIO_Init	1
+../Core/Src/main.c:426:6:Error_Handler	1

@@ -1,0 +1,9 @@
+../Core/Src/main.c:74:6:Keyboard_Press_Key	32	static
+../Core/Src/main.c:90:6:Keyboard_Type_String	24	static
+../Core/Src/main.c:128:5:main	56	static
+../Core/Src/main.c:218:6:SystemClock_Config	88	static
+../Core/Src/main.c:265:13:MX_I2C1_Init	8	static
+../Core/Src/main.c:299:13:MX_SPI1_Init	8	static
+../Core/Src/main.c:337:13:MX_USART1_UART_Init	8	static
+../Core/Src/main.c:370:13:MX_GPIO_Init	40	static
+../Core/Src/main.c:426:6:Error_Handler	4	static,ignoring_inline_asm
